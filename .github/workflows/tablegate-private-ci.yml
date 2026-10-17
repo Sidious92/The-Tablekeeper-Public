@@ -12,7 +12,7 @@ on:
         description: "40-character SHA of the private Tablekeeper commit to validate"
         required: false
         type: string
-        default: "8db18b0551b061da82e01ddf754ec32b91e05435"
+        default: "c6be7013b8281e4621999b4cf46a871d47ebe1cd"
 
 permissions:
   contents: read
@@ -34,7 +34,7 @@ jobs:
         name: Require an immutable private commit SHA
         shell: bash
         env:
-          REQUESTED_SHA: ${{ inputs.source_sha || '8db18b0551b061da82e01ddf754ec32b91e05435' }}
+          REQUESTED_SHA: ${{ inputs.source_sha || 'c6be7013b8281e4621999b4cf46a871d47ebe1cd' }}
         run: |
           set -euo pipefail
           if [[ ! "$REQUESTED_SHA" =~ ^[0-9a-fA-F]{40}$ ]]; then
@@ -168,7 +168,7 @@ jobs:
           if bash scripts/atlas-isolated-sql-ci.sh > "$RUNNER_TEMP/tablegate-private-sql.log" 2>&1; then
             echo "Disposable SQL/RLS/Storage validation: passed"
           else
-            echo "::error::Disposable SQL/RLS/Storage validation: failed (private output withheld)"
+            echo "::error::Disposable SQL/RLS/Storage validation: private stage code $? (details withheld)"
             exit 1
           fi
       - name: Stop disposable local Supabase
