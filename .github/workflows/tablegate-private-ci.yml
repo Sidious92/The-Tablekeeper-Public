@@ -171,7 +171,7 @@ jobs:
             stage_code="$?"
             # Only a numeric psql line locator escapes the ephemeral private log.
             # Never print SQL source, SQL errors, paths, tokens, or runner files.
-            sql_line="$(sed -nE 's/^psql:.*:([0-9]+): (ERROR|FATAL):.*/\\1/p' "$RUNNER_TEMP/tablegate-private-sql.log" | tail -n 1)"
+            sql_line="$(sed -nE 's/^psql:.*:([0-9]+): (ERROR|FATAL):.*/\1/p' "$RUNNER_TEMP/tablegate-private-sql.log" | tail -n 1)"
             if [[ "$sql_line" =~ ^[0-9]{1,5}$ ]]; then
               echo "::error::Disposable SQL validation failed: phase $stage_code, SQL line $sql_line (details withheld)"
             else
