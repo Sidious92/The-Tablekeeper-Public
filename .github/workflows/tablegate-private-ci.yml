@@ -1,0 +1,179 @@
+name: TableGate pinned private CI
+
+# Public workflow configuration only. No PR triggers or unreviewed external code.
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/tablegate-private-ci.yml"
+  workflow_dispatch:
+    inputs:
+      source_sha:
+        description: "40-character SHA of the private Tablekeeper commit to validate"
+        required: false
+        type: string
+        default: "8db18b0551b061da82e01ddf754ec32b91e05435"
+
+permissions:
+  contents: read
+
+# Keep explicit checks sequential when maintainers submit another SHA.
+concurrency:
+  group: tablegate-pinned-private-ci
+  cancel-in-progress: false
+
+jobs:
+  validate:
+    name: Validate pinned commit
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    outputs:
+      source_sha: ${{ steps.validate.outputs.source_sha }}
+    steps:
+      - id: validate
+        name: Require an immutable private commit SHA
+        shell: bash
+        env:
+          REQUESTED_SHA: ${{ inputs.source_sha || '8db18b0551b061da82e01ddf754ec32b91e05435' }}
+        run: |
+          set -euo pipefail
+          if [[ ! "$REQUESTED_SHA" =~ ^[0-9a-fA-F]{40}$ ]]; then
+            echo "::error::A valid 40-character private commit SHA is required"
+            exit 1
+          fi
+          printf 'source_sha=%s\n' "$REQUESTED_SHA" >> "$GITHUB_OUTPUT"
+
+  build:
+    name: Build / strict types / unit tests
+    needs: validate
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout private commit without persisting token
+        uses: actions/checkout@v4
+        with:
+          repository: Sidious92/The-Tablekeeper
+          ref: ${{ needs.validate.outputs.source_sha }}
+          token: ${{ secrets.THE_TABLEKEEPER_TOKEN }}
+          persist-credentials: false
+          fetch-depth: 1
+          show-progress: false
+          path: private-workspace
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - uses: oven-sh/setup-bun@v2
+      - name: Validate without exposing private output
+        working-directory: private-workspace
+        shell: bash
+        run: |
+          set -euo pipefail
+          run_private() {
+            local stage="$1"; shift
+            if "$@" > "$RUNNER_TEMP/tablegate-build-${stage}.log" 2>&1; then
+              echo "${stage}: passed"
+            else
+              echo "::error::${stage}: failed (private output deliberately withheld from public Actions)"
+              exit 1
+            fi
+          }
+          run_private dependencies bun install --frozen-lockfile
+          run_private standalone bun run check:standalone
+          run_private bundle bun run build
+          run_private types bunx tsc --noEmit
+          run_private unit bun run test
+
+  browser:
+    name: Browser smoke (local only)
+    needs: validate
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - name: Checkout private commit without persisting token
+        uses: actions/checkout@v4
+        with:
+          repository: Sidious92/The-Tablekeeper
+          ref: ${{ needs.validate.outputs.source_sha }}
+          token: ${{ secrets.THE_TABLEKEEPER_TOKEN }}
+          persist-credentials: false
+          fetch-depth: 1
+          show-progress: false
+          path: private-workspace
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - uses: oven-sh/setup-bun@v2
+      - name: Browser setup and smoke without public logs or screenshots
+        working-directory: private-workspace
+        shell: bash
+        run: |
+          set -euo pipefail
+          run_private() {
+            local stage="$1"; shift
+            if "$@" > "$RUNNER_TEMP/tablegate-browser-${stage}.log" 2>&1; then
+              echo "${stage}: passed"
+            else
+              echo "::error::${stage}: failed (private output deliberately withheld from public Actions)"
+              exit 1
+            fi
+          }
+          run_private dependencies bun install --frozen-lockfile
+          run_private playwright-install npm install --prefix .atlas-ci --no-save --no-audit --no-fund playwright@1.56.1
+          run_private browser-install ./.atlas-ci/node_modules/.bin/playwright install --with-deps chromium
+          bun run dev -- --host 127.0.0.1 --port 4173 > "$RUNNER_TEMP/tablegate-vite.log" 2>&1 &
+          server_pid=$!
+          trap 'kill "$server_pid" 2>/dev/null || true' EXIT
+          ready=0
+          for i in $(seq 1 80); do
+            if curl -fsS http://127.0.0.1:4173/ >/dev/null 2>&1; then
+              ready=1
+              break
+            fi
+            sleep 2
+          done
+          if [[ "$ready" != "1" ]]; then
+            echo "::error::local-browser-server: failed (private server log withheld)"
+            exit 1
+          fi
+          echo "Local browser server: ready"
+          export ATLAS_BASE_URL=http://127.0.0.1:4173
+          run_private browser-smoke node scripts/atlas-browser-smoke.cjs
+
+  sql:
+    name: Disposable local Supabase / SQL / RLS / Storage
+    needs: validate
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    env:
+      ATLAS_ISOLATED_SQL_TEST: "yes"
+    steps:
+      - name: Checkout private commit without persisting token
+        uses: actions/checkout@v4
+        with:
+          repository: Sidious92/The-Tablekeeper
+          ref: ${{ needs.validate.outputs.source_sha }}
+          token: ${{ secrets.THE_TABLEKEEPER_TOKEN }}
+          persist-credentials: false
+          fetch-depth: 1
+          show-progress: false
+          path: private-workspace
+      - uses: supabase/setup-cli@v1
+        with:
+          version: 2.121.0
+      - name: Run isolated SQL in local Docker without public details
+        working-directory: private-workspace
+        shell: bash
+        run: |
+          set -euo pipefail
+          if bash scripts/atlas-isolated-sql-ci.sh > "$RUNNER_TEMP/tablegate-private-sql.log" 2>&1; then
+            echo "Disposable SQL/RLS/Storage validation: passed"
+          else
+            echo "::error::Disposable SQL/RLS/Storage validation: failed (private output withheld)"
+            exit 1
+          fi
+      - name: Stop disposable local Supabase
+        if: always()
+        working-directory: private-workspace
+        shell: bash
+        run: |
+          supabase stop --no-backup > "$RUNNER_TEMP/tablegate-supabase-stop.log" 2>&1 || true
