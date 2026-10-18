@@ -84,6 +84,128 @@ jobs:
                 elif grep -Eiq 'Error.*TS[0-9]{4}|Type error' "$RUNNER_TEMP/tablegate-build-bundle.log"; then
                   category=typing
                 fi
+                # Only a numeric line index and generic source category.
+                # Never print source paths, exception text or log excerpts.
+                scope=other
+                if grep -q 'CloudForgeRenderPanel.tsx' "$RUNNER_TEMP/tablegate-build-bundle.log"; then scope=panel; fi
+                if grep -q 'forgeRenderReview.ts' "$RUNNER_TEMP/tablegate-build-bundle.log"; then scope=review_helper; fi
+                number=$(grep -oE 'CloudForgeRenderPanel.tsx:[0-9]+' "$RUNNER_TEMP/tablegate-build-bundle.log" | head -n 1 | grep -oE '[0-9]+
+              fi
+              echo "::error::${stage}: failed (private output deliberately withheld from public Actions)"
+              exit 1
+            fi
+          }
+          run_private dependencies bun install --frozen-lockfile
+          run_private standalone bun run check:standalone
+          run_private bundle bun run build
+          run_private types bunx tsc --noEmit
+          run_private unit bun run test
+
+  browser:
+    name: Browser smoke (local only)
+    needs: validate
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - name: Checkout private commit without persisting token
+        uses: actions/checkout@v4
+        with:
+          repository: Sidious92/The-Tablekeeper
+          ref: ${{ needs.validate.outputs.source_sha }}
+          token: ${{ secrets.THE_TABLEKEEPER_TOKEN }}
+          persist-credentials: false
+          fetch-depth: 1
+          show-progress: false
+          path: private-workspace
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - uses: oven-sh/setup-bun@v2
+      - name: Browser setup and smoke without public logs or screenshots
+        working-directory: private-workspace
+        shell: bash
+        run: |
+          set -euo pipefail
+          run_private() {
+            local stage="$1"; shift
+            if "$@" > "$RUNNER_TEMP/tablegate-browser-${stage}.log" 2>&1; then
+              echo "${stage}: passed"
+            else
+              echo "::error::${stage}: failed (private output deliberately withheld from public Actions)"
+              exit 1
+            fi
+          }
+          run_private dependencies bun install --frozen-lockfile
+          run_private playwright-install npm install --prefix .atlas-ci --no-save --no-audit --no-fund playwright@1.56.1
+          run_private browser-install ./.atlas-ci/node_modules/.bin/playwright install --with-deps chromium
+          bun run dev -- --host 127.0.0.1 --port 4173 > "$RUNNER_TEMP/tablegate-vite.log" 2>&1 &
+          server_pid=$!
+          trap 'kill "$server_pid" 2>/dev/null || true' EXIT
+          ready=0
+          for i in $(seq 1 80); do
+            if curl -fsS http://127.0.0.1:4173/ >/dev/null 2>&1; then
+              ready=1
+              break
+            fi
+            sleep 2
+          done
+          if [[ "$ready" != "1" ]]; then
+            echo "::error::local-browser-server: failed (private server log withheld)"
+            exit 1
+          fi
+          echo "Local browser server: ready"
+          export ATLAS_BASE_URL=http://127.0.0.1:4173
+          run_private browser-smoke node scripts/atlas-browser-smoke.cjs
+
+  sql:
+    name: Disposable local Supabase / SQL / RLS / Storage
+    needs: validate
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    env:
+      ATLAS_ISOLATED_SQL_TEST: "yes"
+    steps:
+      - name: Checkout private commit without persisting token
+        uses: actions/checkout@v4
+        with:
+          repository: Sidious92/The-Tablekeeper
+          ref: ${{ needs.validate.outputs.source_sha }}
+          token: ${{ secrets.THE_TABLEKEEPER_TOKEN }}
+          persist-credentials: false
+          fetch-depth: 1
+          show-progress: false
+          path: private-workspace
+      - uses: supabase/setup-cli@v1
+        with:
+          version: 2.121.0
+      - name: Run isolated SQL in local Docker without public details
+        working-directory: private-workspace
+        shell: bash
+        run: |
+          set -euo pipefail
+          if bash scripts/atlas-isolated-sql-ci.sh > "$RUNNER_TEMP/tablegate-private-sql.log" 2>&1; then
+            echo "Disposable SQL/RLS/Storage validation: passed"
+          else
+            stage_code="$?"
+            # Only a numeric psql line locator escapes the ephemeral private log.
+            # Never print SQL source, SQL errors, paths, tokens, or runner files.
+            sql_line="$(sed -nE 's/^psql:.*:([0-9]+): (ERROR|FATAL):.*/\1/p' "$RUNNER_TEMP/tablegate-private-sql.log" | tail -n 1)"
+            if [[ "$sql_line" =~ ^[0-9]{1,5}$ ]]; then
+              echo "::error::Disposable SQL validation failed: phase $stage_code, SQL line $sql_line (details withheld)"
+            else
+              echo "::error::Disposable SQL validation failed: phase $stage_code (details withheld)"
+            fi
+            exit 1
+          fi
+      - name: Stop disposable local Supabase
+        if: always()
+        working-directory: private-workspace
+        shell: bash
+        run: |
+          supabase stop --no-backup > "$RUNNER_TEMP/tablegate-supabase-stop.log" 2>&1 || true
+ || true)
+                if [[ -z "$number" ]]; then number=unknown; fi
+                echo "::notice::bundle-error-scope=${scope},line=${number} (private details withheld)"
                 echo "::notice::bundle-diagnostic-category=${category} (private details withheld)"
               fi
               echo "::error::${stage}: failed (private output deliberately withheld from public Actions)"
