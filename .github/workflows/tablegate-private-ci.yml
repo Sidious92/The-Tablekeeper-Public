@@ -73,6 +73,19 @@ jobs:
             if "$@" > "$RUNNER_TEMP/tablegate-build-${stage}.log" 2>&1; then
               echo "${stage}: passed"
             else
+              if [[ "$stage" == "bundle" ]]; then
+                category=unknown
+                if grep -Eiq 'Parse failure|Parse error|Transform failed|Unexpected token|Expected .|Unterminated|SyntaxError' "$RUNNER_TEMP/tablegate-build-bundle.log"; then
+                  category=syntax
+                elif grep -Eiq 'Could not resolve|Failed to resolve|Cannot find module|Module not found|missing export' "$RUNNER_TEMP/tablegate-build-bundle.log"; then
+                  category=resolution
+                elif grep -Eiq 'Out of memory|heap out of memory|Killed process|SIGKILL' "$RUNNER_TEMP/tablegate-build-bundle.log"; then
+                  category=resource
+                elif grep -Eiq 'Error.*TS[0-9]{4}|Type error' "$RUNNER_TEMP/tablegate-build-bundle.log"; then
+                  category=typing
+                fi
+                echo "::notice::bundle-diagnostic-category=${category} (private details withheld)"
+              fi
               echo "::error::${stage}: failed (private output deliberately withheld from public Actions)"
               exit 1
             fi
