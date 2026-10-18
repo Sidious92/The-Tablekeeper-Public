@@ -12,7 +12,7 @@ on:
         description: "40-character SHA of the private Tablekeeper commit to validate"
         required: false
         type: string
-        default: "ce83e3b8e0cf40567eb5a6de9046164a08d5f782"
+        default: "590c010b652f2936abe86148d4f88da4e0a8e167"
 
 permissions:
   contents: read
@@ -34,7 +34,7 @@ jobs:
         name: Require an immutable private commit SHA
         shell: bash
         env:
-          REQUESTED_SHA: ${{ inputs.source_sha || 'ce83e3b8e0cf40567eb5a6de9046164a08d5f782' }}
+          REQUESTED_SHA: ${{ inputs.source_sha || '590c010b652f2936abe86148d4f88da4e0a8e167' }}
         run: |
           set -euo pipefail
           if [[ ! "$REQUESTED_SHA" =~ ^[0-9a-fA-F]{40}$ ]]; then
