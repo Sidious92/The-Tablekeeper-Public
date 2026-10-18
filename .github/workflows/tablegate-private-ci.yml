@@ -73,6 +73,11 @@ jobs:
             if "$@" > "$RUNNER_TEMP/tablegate-build-${stage}.log" 2>&1; then
               echo "${stage}: passed"
             else
+              if [[ "$stage" == "bundle" ]]; then
+                line=$(grep -oE "CloudForgeRenderPanel.tsx:[0-9]+" "$RUNNER_TEMP/tablegate-build-bundle.log" | head -n 1 | cut -d: -f2 || true)
+                if [[ -z "$line" ]]; then line=unknown; fi
+                echo "::notice::redacted-panel-syntax-line=$line"
+              fi
               echo "::error::${stage}: failed (private output deliberately withheld from public Actions)"
               exit 1
             fi
