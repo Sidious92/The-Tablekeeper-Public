@@ -73,6 +73,16 @@ jobs:
             if "$@" > "$RUNNER_TEMP/tablegate-build-${stage}.log" 2>&1; then
               echo "${stage}: passed"
             else
+              if [[ "$stage" == "bundle" ]]; then
+                category=other
+                if grep -Eiq 'Parse error|Transform failed|Unexpected token|Expected .|Unterminated|SyntaxError' "$RUNNER_TEMP/tablegate-build-bundle.log"; then category=parse; fi
+                if grep -Eiq 'Could not resolve|Failed to resolve|Cannot find module' "$RUNNER_TEMP/tablegate-build-bundle.log"; then category=import; fi
+                scope=other
+                if grep -q 'CloudAtlasHistoryPanel.tsx' "$RUNNER_TEMP/tablegate-build-bundle.log"; then scope=history_panel; fi
+                if grep -q 'atlasHistoryRepository.ts' "$RUNNER_TEMP/tablegate-build-bundle.log"; then scope=history_repository; fi
+                if grep -q 'cloud-atlas-history-panel.test.tsx' "$RUNNER_TEMP/tablegate-build-bundle.log"; then scope=history_test; fi
+                echo "::notice::redacted-bundle-category=$category;scope=$scope"
+              fi
               echo "::error::${stage}: failed (private output deliberately withheld from public Actions)"
               exit 1
             fi
