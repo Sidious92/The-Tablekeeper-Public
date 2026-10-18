@@ -12,7 +12,7 @@ on:
         description: "40-character SHA of the private Tablekeeper commit to validate"
         required: false
         type: string
-        default: "590c010b652f2936abe86148d4f88da4e0a8e167"
+        default: "033786da1e3cb3a8d47d79af91bc306f1d50689d"
 
 permissions:
   contents: read
@@ -34,7 +34,7 @@ jobs:
         name: Require an immutable private commit SHA
         shell: bash
         env:
-          REQUESTED_SHA: ${{ inputs.source_sha || '590c010b652f2936abe86148d4f88da4e0a8e167' }}
+          REQUESTED_SHA: ${{ inputs.source_sha || '033786da1e3cb3a8d47d79af91bc306f1d50689d' }}
         run: |
           set -euo pipefail
           if [[ ! "$REQUESTED_SHA" =~ ^[0-9a-fA-F]{40}$ ]]; then
@@ -73,19 +73,6 @@ jobs:
             if "$@" > "$RUNNER_TEMP/tablegate-build-${stage}.log" 2>&1; then
               echo "${stage}: passed"
             else
-              if [[ "$stage" == "bundle" ]]; then
-                category=other
-                if grep -Eiq 'Parse error|Transform failed|Unexpected token|Expected .|Unterminated|SyntaxError' "$RUNNER_TEMP/tablegate-build-bundle.log"; then category=parse; fi
-                if grep -Eiq 'Could not resolve|Failed to resolve|Cannot find module' "$RUNNER_TEMP/tablegate-build-bundle.log"; then category=import; fi
-                scope=other
-                if grep -q 'CloudAtlasHistoryPanel.tsx' "$RUNNER_TEMP/tablegate-build-bundle.log"; then scope=history_panel; fi
-                if grep -q 'atlasHistoryRepository.ts' "$RUNNER_TEMP/tablegate-build-bundle.log"; then scope=history_repository; fi
-                if grep -q 'cloud-atlas-history-panel.test.tsx' "$RUNNER_TEMP/tablegate-build-bundle.log"; then scope=history_test; fi
-                number=$(grep -oE 'CloudAtlasHistoryPanel.tsx:[0-9]+' "$RUNNER_TEMP/tablegate-build-bundle.log" | head -n 1 | cut -d: -f2 || true)
-                if [[ -z "$number" ]]; then number=unknown; fi
-                echo "::notice::redacted-history-line=$number"
-                echo "::notice::redacted-bundle-category=$category;scope=$scope"
-              fi
               echo "::error::${stage}: failed (private output deliberately withheld from public Actions)"
               exit 1
             fi
