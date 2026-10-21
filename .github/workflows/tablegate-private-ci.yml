@@ -73,6 +73,23 @@ jobs:
             if "$@" > "$RUNNER_TEMP/tablegate-build-${stage}.log" 2>&1; then
               echo "${stage}: passed"
             else
+              if [[ "$stage" == "types" ]]; then
+                file="$RUNNER_TEMP/tablegate-build-types.log"
+                total=$(grep -c 'error TS[0-9]' "$file" || true)
+                scopes=()
+                if grep -Fq 'campaignSearchRepository.ts' "$file"; then scopes+=('search_repository'); fi
+                if grep -Fq 'CloudCampaignSearch.tsx' "$file"; then scopes+=('search_component'); fi
+                if grep -Fq 'campaign-header-search.test.tsx' "$file"; then scopes+=('search_test'); fi
+                if grep -Fq 'CloudCanonicalCompendium.tsx' "$file"; then scopes+=('master_compendium'); fi
+                if grep -Fq 'CloudWorldLore.tsx' "$file"; then scopes+=('lore'); fi
+                if grep -Fq 'CloudPlayerAtlasExplorer.tsx' "$file"; then scopes+=('player_atlas'); fi
+                if grep -Fq 'campagne.' "$file"; then scopes+=('campaign_route'); fi
+                if grep -Fq 'CampaignWorkspacePanels.tsx' "$file"; then scopes+=('workspace_panels'); fi
+                if (( ${#scopes[@]} == 0 )); then scopes=('other'); fi
+                printf '::notice::redacted-types-count=%s;scopes=%s\n' "$total" "${scopes[*]}"
+                codes=$(grep -oE 'error TS[0-9]+' "$file" | sort -u | tr '\n' ',' || true)
+                printf '::notice::redacted-types-codes=%s\n' "$codes"
+              fi
               echo "::error::${stage}: failed (private output deliberately withheld from public Actions)"
               exit 1
             fi
