@@ -12,7 +12,7 @@ on:
         description: "40-character SHA of the private Tablekeeper commit to validate"
         required: false
         type: string
-        default: "385c4c7a743cdea7fe203fbb88ca24d65edd37ef"
+        default: "bbb2073c560f8283bce980e5cdde824f04225f09"
 
 permissions:
   contents: read
@@ -34,7 +34,7 @@ jobs:
         name: Require an immutable private commit SHA
         shell: bash
         env:
-          REQUESTED_SHA: ${{ inputs.source_sha || '385c4c7a743cdea7fe203fbb88ca24d65edd37ef' }}
+          REQUESTED_SHA: ${{ inputs.source_sha || 'bbb2073c560f8283bce980e5cdde824f04225f09' }}
         run: |
           set -euo pipefail
           if [[ ! "$REQUESTED_SHA" =~ ^[0-9a-fA-F]{40}$ ]]; then
@@ -73,23 +73,6 @@ jobs:
             if "$@" > "$RUNNER_TEMP/tablegate-build-${stage}.log" 2>&1; then
               echo "${stage}: passed"
             else
-              if [[ "$stage" == "types" ]]; then
-                file="$RUNNER_TEMP/tablegate-build-types.log"
-                total=$(grep -c 'error TS[0-9]' "$file" || true)
-                scopes=()
-                if grep -Fq 'campaignSearchRepository.ts' "$file"; then scopes+=('search_repository'); fi
-                if grep -Fq 'CloudCampaignSearch.tsx' "$file"; then scopes+=('search_component'); fi
-                if grep -Fq 'campaign-header-search.test.tsx' "$file"; then scopes+=('search_test'); fi
-                if grep -Fq 'CloudCanonicalCompendium.tsx' "$file"; then scopes+=('master_compendium'); fi
-                if grep -Fq 'CloudWorldLore.tsx' "$file"; then scopes+=('lore'); fi
-                if grep -Fq 'CloudPlayerAtlasExplorer.tsx' "$file"; then scopes+=('player_atlas'); fi
-                if grep -Fq 'campagne.' "$file"; then scopes+=('campaign_route'); fi
-                if grep -Fq 'CampaignWorkspacePanels.tsx' "$file"; then scopes+=('workspace_panels'); fi
-                if (( ${#scopes[@]} == 0 )); then scopes=('other'); fi
-                printf '::notice::redacted-types-count=%s;scopes=%s\n' "$total" "${scopes[*]}"
-                codes=$(grep -oE 'error TS[0-9]+' "$file" | sort -u | tr '\n' ',' || true)
-                printf '::notice::redacted-types-codes=%s\n' "$codes"
-              fi
               echo "::error::${stage}: failed (private output deliberately withheld from public Actions)"
               exit 1
             fi
