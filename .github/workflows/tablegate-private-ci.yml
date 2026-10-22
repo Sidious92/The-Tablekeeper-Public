@@ -81,6 +81,7 @@ jobs:
           run_private standalone bun run check:standalone
           run_private bundle bun run build
           run_private types bunx tsc --noEmit
+          run_private header-search bunx vitest run src/test/campaign-header-search.test.tsx
           run_private unit bun run test
 
   browser:
