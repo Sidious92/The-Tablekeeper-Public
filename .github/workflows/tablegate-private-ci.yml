@@ -20,7 +20,7 @@ permissions:
 # Only the newest pinned private SHA needs CI. Superseded runs use isolated resources
 # and can safely be cancelled; this avoids blocking newer hotfix validation.
 concurrency:
-  group: tablegate-pinned-private-ci
+  group: tablegate-pinned-private-ci-v2
   cancel-in-progress: true
 
 jobs:
