@@ -12,7 +12,7 @@ on:
         description: "40-character SHA of the private Tablekeeper commit to validate"
         required: false
         type: string
-        default: "def72f021e7c6c5e54fe8ee791aa4a2416b9ce33"
+        default: "e1e1da591607517cc510bc844793660f064dbfaa"
 
 permissions:
   contents: read
@@ -34,7 +34,7 @@ jobs:
         name: Require an immutable private commit SHA
         shell: bash
         env:
-          REQUESTED_SHA: ${{ inputs.source_sha || 'def72f021e7c6c5e54fe8ee791aa4a2416b9ce33' }}
+          REQUESTED_SHA: ${{ inputs.source_sha || 'e1e1da591607517cc510bc844793660f064dbfaa' }}
         run: |
           set -euo pipefail
           if [[ ! "$REQUESTED_SHA" =~ ^[0-9a-fA-F]{40}$ ]]; then
@@ -173,10 +173,13 @@ jobs:
             # Only a numeric psql line locator escapes the ephemeral private log.
             # Never print SQL source, SQL errors, paths, tokens, or runner files.
             sql_line="$(sed -nE 's/^psql:.*:([0-9]+): (ERROR|FATAL):.*/\1/p' "$RUNNER_TEMP/tablegate-private-sql.log" | tail -n 1)"
+            sql_state="$(sed -nE 's/^psql:.*:([0-9]+): (ERROR|FATAL):[[:space:]]*([0-9A-Z]{5}):.*/\3/p' "$RUNNER_TEMP/tablegate-private-sql.log" | tail -n 1)"
+            state_suffix=""
+            if [[ "$sql_state" =~ ^[0-9A-Z]{5}$ ]]; then state_suffix=", SQLSTATE $sql_state"; fi
             if [[ "$sql_line" =~ ^[0-9]{1,5}$ ]]; then
-              echo "::error::Disposable SQL validation failed: phase $stage_code, SQL line $sql_line (details withheld)"
+              echo "::error::Disposable SQL validation failed: phase $stage_code, SQL line $sql_line$state_suffix (details withheld)"
             else
-              echo "::error::Disposable SQL validation failed: phase $stage_code (details withheld)"
+              echo "::error::Disposable SQL validation failed: phase $stage_code$state_suffix (details withheld)"
             fi
             exit 1
           fi
