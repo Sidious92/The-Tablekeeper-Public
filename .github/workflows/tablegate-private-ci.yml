@@ -17,10 +17,11 @@ on:
 permissions:
   contents: read
 
-# Keep explicit checks sequential when maintainers submit another SHA.
+# Only the newest pinned private SHA needs CI. Superseded runs use isolated resources
+# and can safely be cancelled; this avoids blocking newer hotfix validation.
 concurrency:
   group: tablegate-pinned-private-ci
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 jobs:
   validate:
