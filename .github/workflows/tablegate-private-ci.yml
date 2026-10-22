@@ -73,6 +73,11 @@ jobs:
             if "$@" > "$RUNNER_TEMP/tablegate-build-${stage}.log" 2>&1; then
               echo "${stage}: passed"
             else
+              if [[ "$stage" == "types" ]]; then
+                # Only numeric line locators and TypeScript codes; never private paths or messages.
+                hint="$(sed -nE 's/^.*\(([0-9]{1,5}),[0-9]+\): error (TS[0-9]{4,5}):.*/line \1 \2/p' "$RUNNER_TEMP/tablegate-build-types.log" | sed -n '1,12p' | tr '\n' ';')"
+                [[ -z "$hint" ]] || echo "Type diagnostics (anonymous): $hint"
+              fi
               echo "::error::${stage}: failed (private output deliberately withheld from public Actions)"
               exit 1
             fi
