@@ -81,19 +81,19 @@ jobs:
               if [[ "$stage" == "unit" ]]; then
                 # Emit anonymous failed-suite indices only; never publicize private paths, titles or assertions.
                 python3 - "$RUNNER_TEMP/tablegate-build-unit.log" <<'PY'
-import pathlib, re, sys
-ansi = re.compile(r"\x1b\[[0-9;]*m")
-report = ansi.sub("", pathlib.Path(sys.argv[1]).read_text(errors="replace"))
-files = sorted(str(p) for p in pathlib.Path("src").rglob("*") if p.is_file() and re.search(r"\.(test|spec)\.[jt]sx?$", str(p)))
-found = []
-for line in report.splitlines():
-    if "FAIL " not in line and not line.strip().startswith("❯ "):
-        continue
-    for f in re.findall(r"src/[^\s:]+\.(?:test|spec)\.[jt]sx?", line):
-        if f in files and f not in found:
-            found.append(f)
-print("Anonymized unit failure: suites", len(files), "failure_indices", [files.index(k)+1 for k in found[:16]])
-PY
+          import pathlib, re, sys
+          ansi = re.compile(r"\x1b\[[0-9;]*m")
+          report = ansi.sub("", pathlib.Path(sys.argv[1]).read_text(errors="replace"))
+          files = sorted(str(p) for p in pathlib.Path("src").rglob("*") if p.is_file() and re.search(r"\.(test|spec)\.[jt]sx?$", str(p)))
+          found = []
+          for line in report.splitlines():
+              if "FAIL " not in line and not line.strip().startswith("❯ "):
+                  continue
+              for f in re.findall(r"src/[^\s:]+\.(?:test|spec)\.[jt]sx?", line):
+                  if f in files and f not in found:
+                      found.append(f)
+          print("Anonymized unit failure: suites", len(files), "failure_indices", [files.index(k)+1 for k in found[:16]])
+          PY
               fi
               echo "::error::${stage}: failed (private output deliberately withheld from public Actions)"
               exit 1
