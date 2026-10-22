@@ -75,7 +75,7 @@ jobs:
             else
               if [[ "$stage" == "types" ]]; then
                 # Only numeric line locators and TypeScript codes; never private paths or messages.
-                hint="$(python3 -c 'import pathlib,re,sys; files=sorted(str(p) for p in pathlib.Path("src").rglob("*") if p.suffix in (".ts",".tsx")); errors=re.findall(r"^([^(:]+)\\((\\d+),\\d+\\): error (TS\\d+):",pathlib.Path(sys.argv[1]).read_text(),re.M); print(";".join(f"source#{files.index(path)+1} line {line} {code}" for path,line,code in errors[:12] if path in files))' "$RUNNER_TEMP/tablegate-build-types.log")"
+                hint="$(python3 -c 'import pathlib,re,sys; files=sorted(str(p) for p in pathlib.Path("src").rglob("*") if p.suffix in (".ts",".tsx")); errors=re.findall(r"^([^(:]+)\((\d+),\d+\): error (TS\d+):",pathlib.Path(sys.argv[1]).read_text(),re.M); print(";".join(f"source#{files.index(path)+1} line {line} {code}" for path,line,code in errors[:12] if path in files))' "$RUNNER_TEMP/tablegate-build-types.log")"
                 [[ -z "$hint" ]] || echo "Type diagnostics (anonymous): $hint"
               fi
               echo "::error::${stage}: failed (private output deliberately withheld from public Actions)"
