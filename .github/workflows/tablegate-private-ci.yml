@@ -17,11 +17,11 @@ on:
 permissions:
   contents: read
 
-# Only the newest pinned private SHA needs CI. Superseded runs use isolated resources
-# and can safely be cancelled; this avoids blocking newer hotfix validation.
+# One immutable-source validation per workflow change. Do not cancel a running
+# safety gate: cancelled jobs cannot authorize Production release.
 concurrency:
   group: tablegate-pinned-private-ci-v2
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
   validate:
