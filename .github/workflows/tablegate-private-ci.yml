@@ -17,10 +17,10 @@ on:
 permissions:
   contents: read
 
-# One immutable-source validation per workflow change. Do not cancel a running
-# safety gate: cancelled jobs cannot authorize Production release.
+# Keep every immutable-source safety gate, but do not let an obsolete
+# hung run block a NEW commit's review. Never auto-cancel tested releases.
 concurrency:
-  group: tablegate-pinned-private-ci-v2
+  group: tablegate-pinned-private-ci-v3-${{ github.sha }}
   cancel-in-progress: false
 
 jobs:
