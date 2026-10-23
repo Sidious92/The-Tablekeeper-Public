@@ -76,7 +76,7 @@ jobs:
             else
               if [[ "$stage" == "types" ]]; then
                 # Only numeric line locators and TypeScript codes; never private paths or messages.
-                hint="$(python3 -c 'import pathlib,re,sys; files=sorted(str(p) for p in pathlib.Path("src").rglob("*") if p.suffix in (".ts",".tsx")); errors=re.findall(r"^([^(:]+)\((\d+),\d+\): error (TS\d+):",pathlib.Path(sys.argv[1]).read_text(),re.M); print(";".join(f"source#{files.index(path)+1} line {line} {code}" for path,line,code in errors[:12] if path in files))' "$RUNNER_TEMP/tablegate-build-types.log")"
+                hint="$(python3 -c 'import pathlib,re,sys; files=sorted(str(p) for p in pathlib.Path("src").rglob("*") if p.suffix in (".ts",".tsx")); log=re.sub(r"\x1b\[[0-9;]*m","",pathlib.Path(sys.argv[1]).read_text(errors="replace")); errors=re.findall(r"([^\s(:]+\.[jt]sx?)(?:\((\d+),\d+\)|:(\d+):\d+)[^\n]*?(TS\d+)",log,re.M); print(";".join(f"source#{files.index(path)+1} line {a or b} {code}" for path,a,b,code in errors[:12] if path in files) or "ts-codes="+",".join(sorted(set(re.findall(r"TS\d+",log)))[:12]))' "$RUNNER_TEMP/tablegate-build-types.log")"
                 [[ -z "$hint" ]] || echo "Type diagnostics (anonymous): $hint"
               fi
               if [[ "$stage" == "unit" ]]; then
