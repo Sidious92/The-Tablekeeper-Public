@@ -94,6 +94,14 @@ jobs:
                   if f in files and f not in found:
                       found.append(f)
           print("Anonymized unit failure: suites", len(files), "failure_indices", [files.index(k)+1 for k in found[:16]])
+          for f in found[:5]:
+              src=pathlib.Path(f).read_text(errors="replace")
+              labels=re.findall(r'\\bit\\(\\s*["\\\']([^"\\\']+)["\\\']',src)
+              failed_titles=[line.strip().split(" > ")[-1].strip() for line in report.splitlines()
+                  if re.search(r"\\bFAIL\\s+"+re.escape(f)+r"\\s+>",line)]
+              failed_cases=[i+1 for i,label in enumerate(labels) if label in failed_titles]
+              print("Anonymous test cases for suite",files.index(f)+1,
+                    "of",len(labels),"failed_indices",failed_cases or ["undetermined"])
           PY
               fi
               echo "::error::${stage}: failed (private output deliberately withheld from public Actions)"
