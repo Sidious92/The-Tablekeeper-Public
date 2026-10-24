@@ -6,6 +6,7 @@ on:
     branches: [main]
     paths:
       - ".github/workflows/tablegate-private-ci.yml"
+      - ".github/tablegate-ci-pin.txt"
   workflow_dispatch:
     inputs:
       source_sha:
@@ -31,13 +32,21 @@ jobs:
     outputs:
       source_sha: ${{ steps.validate.outputs.source_sha }}
     steps:
+      - name: Checkout public workflow pin only
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          fetch-depth: 1
       - id: validate
         name: Require an immutable private commit SHA
         shell: bash
         env:
-          REQUESTED_SHA: ${{ inputs.source_sha || 'd9b82563829848d7143f6b2582df3171694fc7dc' }}
+          REQUESTED_SHA: ${{ inputs.source_sha || '' }}
         run: |
           set -euo pipefail
+          if [[ -z "$REQUESTED_SHA" && -f .github/tablegate-ci-pin.txt ]]; then
+            REQUESTED_SHA="$(tr -d '\r\n' < .github/tablegate-ci-pin.txt)"
+          fi
           if [[ ! "$REQUESTED_SHA" =~ ^[0-9a-fA-F]{40}$ ]]; then
             echo "::error::A valid 40-character private commit SHA is required"
             exit 1
