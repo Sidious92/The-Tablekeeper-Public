@@ -99,9 +99,17 @@ jobs:
               labels=re.findall(r'it\("([^"]+)"',src)
               failed_titles=[line.strip().split(" > ")[-1].strip() for line in report.splitlines()
                   if re.search(r"\\bFAIL\\s+"+re.escape(f)+r"\\s+>",line)]
-              failed_cases=[i+1 for i,label in enumerate(labels) if label in failed_titles]
+              marked=[line for line in report.splitlines() if
+                  any(symbol in line for symbol in ("×","✗","✕","❯")) or
+                  ("FAIL " in line and "src/" in line)]
+              failed_cases=[i+1 for i,label in enumerate(labels)
+                  if label in failed_titles or
+                  any(label in line for line in marked if "src/" not in line or " > " in line)]
               print("Anonymous test cases for suite",files.index(f)+1,
                     "of",len(labels),"failed_indices",failed_cases or ["undetermined"])
+              print("Anonymous error categories",
+                [kind for kind in ("AssertionError","TestingLibraryElementError","TypeError","ReferenceError")
+                 if kind in report][:4])
           PY
               fi
               echo "::error::${stage}: failed (private output deliberately withheld from public Actions)"
