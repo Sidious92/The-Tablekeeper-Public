@@ -110,6 +110,9 @@ jobs:
               print("Anonymous error categories",
                 [kind for kind in ("AssertionError","TestingLibraryElementError","TypeError","ReferenceError")
                  if kind in report][:4])
+              stacklines=re.findall(re.escape(f)+r":(\\d+):(\\d+)",report)
+              print("Anonymous assertion lines for suite",files.index(f)+1,
+                "locations",list(dict.fromkeys(stacklines))[-6:])
           PY
               fi
               echo "::error::${stage}: failed (private output deliberately withheld from public Actions)"
