@@ -248,7 +248,16 @@ jobs:
             if "$@" > "$RUNNER_TEMP/tablegate-role-browser-$stage.log" 2>&1; then
               echo "$stage: passed"
             else
-              echo "::error::$stage: failed (private browser logs withheld)"
+              if [[ "$stage" == "role-matrix" ]]; then
+                qa_phase="$(sed -nE 's/^CI-QA-FAIL-PHASE=([0-9]{1,3})$/\\1/p' "$RUNNER_TEMP/tablegate-role-browser-$stage.log" | tail -n 1)"
+                if [[ "$qa_phase" =~ ^[0-9]{1,3}$ ]]; then
+                  echo "::error::$stage: failed at QA phase $qa_phase (private browser logs withheld)"
+                else
+                  echo "::error::$stage: failed (private browser logs withheld)"
+                fi
+              else
+                echo "::error::$stage: failed (private browser logs withheld)"
+              fi
               exit 1
             fi
           }
