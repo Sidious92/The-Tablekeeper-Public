@@ -10,7 +10,7 @@ on:
   workflow_dispatch:
     inputs:
       source_sha:
-        description: "40-character SHA of the private Tablekeeper commit to validate"
+        description: "40-character SHA of the private TableGate commit to validate"
         required: false
         type: string
         default: "d9b82563829848d7143f6b2582df3171694fc7dc"
@@ -62,7 +62,7 @@ jobs:
       - name: Checkout private commit without persisting token
         uses: actions/checkout@v4
         with:
-          repository: Sidious92/The-Tablekeeper
+          repository: Sidious92/TableGate
           ref: ${{ needs.validate.outputs.source_sha }}
           token: ${{ secrets.THE_TABLEKEEPER_TOKEN }}
           persist-credentials: false
@@ -144,7 +144,7 @@ jobs:
       - name: Checkout private commit without persisting token
         uses: actions/checkout@v4
         with:
-          repository: Sidious92/The-Tablekeeper
+          repository: Sidious92/TableGate
           ref: ${{ needs.validate.outputs.source_sha }}
           token: ${{ secrets.THE_TABLEKEEPER_TOKEN }}
           persist-credentials: false
@@ -202,7 +202,7 @@ jobs:
       - name: Checkout private commit without persisting token
         uses: actions/checkout@v4
         with:
-          repository: Sidious92/The-Tablekeeper
+          repository: Sidious92/TableGate
           ref: ${{ needs.validate.outputs.source_sha }}
           token: ${{ secrets.THE_TABLEKEEPER_TOKEN }}
           persist-credentials: false
