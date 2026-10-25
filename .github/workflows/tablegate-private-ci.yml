@@ -209,6 +209,10 @@ jobs:
           fetch-depth: 1
           show-progress: false
           path: private-workspace
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - uses: oven-sh/setup-bun@v2
       - uses: supabase/setup-cli@v1
         with:
           version: 2.121.0
@@ -234,6 +238,27 @@ jobs:
             fi
             exit 1
           fi
+      - name: Authenticated browser role matrix (local Supabase only)
+        working-directory: private-workspace
+        shell: bash
+        run: |
+          set -euo pipefail
+          run_private() {
+            local stage="$1"; shift
+            if "$@" > "$RUNNER_TEMP/tablegate-role-browser-$stage.log" 2>&1; then
+              echo "$stage: passed"
+            else
+              echo "::error::$stage: failed (private browser logs withheld)"
+              exit 1
+            fi
+          }
+          run_private role-dependencies bun install --frozen-lockfile
+          run_private role-playwright-install npm install --prefix .atlas-ci --no-save --no-audit --no-fund playwright@1.56.1
+          run_private role-chromium-install ./.atlas-ci/node_modules/.bin/playwright install --with-deps chromium
+          set -a
+          eval "$(supabase status -o env | grep -E '^(API_URL|ANON_KEY|SERVICE_ROLE_KEY|PUBLISHABLE_KEY|SECRET_KEY)=')"
+          set +a
+          run_private role-matrix node scripts/tablegate-role-browser-ci.cjs
       - name: Stop disposable local Supabase
         if: always()
         working-directory: private-workspace
