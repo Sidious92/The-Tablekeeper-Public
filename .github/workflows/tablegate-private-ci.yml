@@ -124,6 +124,9 @@ jobs:
                 "locations",list(dict.fromkeys(stacklines))[-6:])
           PY
               fi
+              if [[ "$stage" == "lore-race" ]]; then
+                grep '^V1-LORE-STRESS-FAIL ' "$RUNNER_TEMP/tablegate-build-lore-race.log" || true
+              fi
               echo "::error::${stage}: failed (private output deliberately withheld from public Actions)"
               exit 1
             fi
