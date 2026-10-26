@@ -135,6 +135,7 @@ jobs:
           run_private types bunx tsc --noEmit
           run_private header-search bunx vitest run src/test/campaign-header-search.test.tsx
           run_private unit bun run test
+          run_private lore-race node scripts/v1-lore-race-stress.cjs
 
   browser:
     name: Browser smoke (local only)
@@ -310,5 +311,43 @@ jobs:
             echo "Full tracked-file lexical scan completed; findings require manual review."
           else
             echo "::error::V1 line inventory or analyzer failed (private details withheld)"
+            exit 1
+          fi
+
+  remediation-sandbox:
+    name: Dependency remediation compatibility (sandbox)
+    needs: validate
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout exact pinned private source without persisting token
+        uses: actions/checkout@v4
+        with:
+          repository: Sidious92/TableGate
+          ref: ${{ needs.validate.outputs.source_sha }}
+          token: ${{ secrets.THE_TABLEKEEPER_TOKEN }}
+          persist-credentials: false
+          fetch-depth: 1
+          show-progress: false
+          path: private-workspace
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - uses: oven-sh/setup-bun@v2
+      - name: Apply dependency remediation only to disposable checkout and retest
+        working-directory: private-workspace
+        shell: bash
+        run: |
+          set -euo pipefail
+          if ! bun install --frozen-lockfile > "$RUNNER_TEMP/private-remediation-install.log" 2>&1; then
+            echo "::error::V1 sandbox installation failed (private diagnostic details withheld)"
+            exit 1
+          fi
+          if node scripts/v1-dependency-remediation-sandbox.cjs > "$RUNNER_TEMP/private-remediation-summary.log" 2>&1; then
+            grep '^V1-REMEDIATION-' "$RUNNER_TEMP/private-remediation-summary.log" || true
+            echo "Only isolated temporary dependencies updated; no PR or Production lockfile modified."
+          else
+            grep '^V1-REMEDIATION-' "$RUNNER_TEMP/private-remediation-summary.log" || true
+            echo "::error::V1 dependency remediation compatibility failed (private details withheld)"
             exit 1
           fi
