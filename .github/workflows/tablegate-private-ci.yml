@@ -317,3 +317,41 @@ jobs:
             exit 1
           fi
 
+
+  zod4-sandbox:
+    name: V1 Zod 4 compatibility sandbox
+    needs: validate
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+    steps:
+      - name: Checkout exact pinned private source without persisting token
+        uses: actions/checkout@v4
+        with:
+          repository: Sidious92/TableGate
+          ref: ${{ needs.validate.outputs.source_sha }}
+          token: ${{ secrets.THE_TABLEKEEPER_TOKEN }}
+          persist-credentials: false
+          fetch-depth: 1
+          show-progress: false
+          path: private-workspace
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - uses: oven-sh/setup-bun@v2
+      - name: Evaluate Zod 4.6.7 safely (no repo writes)
+        working-directory: private-workspace
+        shell: bash
+        run: |
+          set -euo pipefail
+          if ! bun install --frozen-lockfile > "$RUNNER_TEMP/tg-zod-install.log" 2>&1; then
+            echo "::error::Zod sandbox install failed (private logs withheld)"
+            exit 1
+          fi
+          if node scripts/v1-zod4-migration-sandbox.cjs > "$RUNNER_TEMP/tg-zod-summary.log" 2>&1; then
+            grep '^V1-ZOD-' "$RUNNER_TEMP/tg-zod-summary.log" || true
+            echo "Zod migration changed only this ephemeral runner checkout."
+          else
+            grep '^V1-ZOD-' "$RUNNER_TEMP/tg-zod-summary.log" || true
+            echo "::error::Zod 4 migration incompatible or incomplete (private logs withheld)"
+            exit 1
+          fi
