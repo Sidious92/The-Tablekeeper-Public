@@ -319,7 +319,7 @@ jobs:
 
 
   zod4-sandbox:
-    name: V1 Zod 4 compatibility sandbox
+    name: V1 Zod removal / Vitest security patch sandbox
     needs: validate
     runs-on: ubuntu-latest
     timeout-minutes: 18
@@ -347,11 +347,11 @@ jobs:
             echo "::error::Zod sandbox install failed (private logs withheld)"
             exit 1
           fi
-          if node scripts/v1-zod4-migration-sandbox.cjs > "$RUNNER_TEMP/tg-zod-summary.log" 2>&1; then
-            grep '^V1-ZOD-' "$RUNNER_TEMP/tg-zod-summary.log" || true
-            echo "Zod migration changed only this ephemeral runner checkout."
+          if node scripts/v1-security-removal-sandbox.cjs > "$RUNNER_TEMP/tg-zod-summary.log" 2>&1; then
+            grep '^V1-SEC-' "$RUNNER_TEMP/tg-zod-summary.log" || true
+            echo "Security updates changed only this ephemeral runner checkout."
           else
             grep '^V1-ZOD-' "$RUNNER_TEMP/tg-zod-summary.log" || true
-            echo "::error::Zod 4 migration incompatible or incomplete (private logs withheld)"
+            echo "::error::Security dependency trial incompatible or incomplete (private logs withheld)"
             exit 1
           fi
