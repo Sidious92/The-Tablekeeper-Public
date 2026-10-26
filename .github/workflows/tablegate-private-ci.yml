@@ -130,6 +130,7 @@ jobs:
           }
           run_private dependencies bun install --frozen-lockfile
           run_private standalone bun run check:standalone
+          run_private lint-logic bun run lint:logic
           run_private bundle bun run build
           run_private types bunx tsc --noEmit
           run_private header-search bunx vitest run src/test/campaign-header-search.test.tsx
