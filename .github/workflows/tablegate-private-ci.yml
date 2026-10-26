@@ -274,3 +274,40 @@ jobs:
         shell: bash
         run: |
           supabase stop --no-backup > "$RUNNER_TEMP/tablegate-supabase-stop.log" 2>&1 || true
+
+  audit:
+    name: Full V1 source inventory / lint / dependency security
+    needs: validate
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout exact pinned private commit without persisting token
+        uses: actions/checkout@v4
+        with:
+          repository: Sidious92/TableGate
+          ref: ${{ needs.validate.outputs.source_sha }}
+          token: ${{ secrets.THE_TABLEKEEPER_TOKEN }}
+          persist-credentials: false
+          fetch-depth: 1
+          show-progress: false
+          path: private-workspace
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - uses: oven-sh/setup-bun@v2
+      - name: Full tracked-line audit with private findings withheld
+        working-directory: private-workspace
+        shell: bash
+        run: |
+          set -euo pipefail
+          if ! bun install --frozen-lockfile > "$RUNNER_TEMP/private-audit-install.log" 2>&1; then
+            echo "::error::V1 dependency installation failed (details withheld)"
+            exit 1
+          fi
+          if node scripts/tablegate-v1-mega-audit.mjs --tooling > "$RUNNER_TEMP/private-audit-summary.log" 2>&1; then
+            grep '^V1-AUDIT-' "$RUNNER_TEMP/private-audit-summary.log" || true
+            echo "Full tracked-file lexical scan completed; findings require manual review."
+          else
+            echo "::error::V1 line inventory or analyzer failed (private details withheld)"
+            exit 1
+          fi
