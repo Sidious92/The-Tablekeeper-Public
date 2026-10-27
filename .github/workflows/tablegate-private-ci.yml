@@ -351,7 +351,7 @@ jobs:
             grep '^V1-SEC-' "$RUNNER_TEMP/tg-zod-summary.log" || true
             echo "Security updates changed only this ephemeral runner checkout."
           else
-            grep '^V1-ZOD-' "$RUNNER_TEMP/tg-zod-summary.log" || true
+            grep '^V1-SEC-' "$RUNNER_TEMP/tg-zod-summary.log" || true
             echo "::error::Security dependency trial incompatible or incomplete (private logs withheld)"
             exit 1
           fi
