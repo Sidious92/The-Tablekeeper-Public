@@ -263,6 +263,8 @@ jobs:
             else
               if [[ "$stage" == "role-matrix" ]]; then
                 qa_phase="$(sed -nE 's/^CI-QA-FAIL-PHASE=([0-9]{1,3})$/\1/p' "$RUNNER_TEMP/tablegate-role-browser-$stage.log" | tail -n 1)"
+                error_kind="$(sed -nE 's/^CI-QA-ERROR-KIND=(TIMEOUT|ASSERTION|HTTP|OTHER)$/\\1/p' "$RUNNER_TEMP/tablegate-role-browser-$stage.log" | tail -n 1)"
+                [[ -z "$error_kind" ]] || echo "Anonymous role QA error category: $error_kind"
                 if [[ "$qa_phase" =~ ^[0-9]{1,3}$ ]]; then
                   echo "::error::$stage: failed at QA phase $qa_phase (private browser logs withheld)"
                 else
@@ -331,7 +333,7 @@ jobs:
 
 
   zod4-sandbox:
-    name: V1 Zod removal / Vitest security patch sandbox
+    name: Committed V1 dependency security gate
     needs: validate
     runs-on: ubuntu-latest
     timeout-minutes: 18
@@ -350,7 +352,7 @@ jobs:
         with:
           node-version: "22"
       - uses: oven-sh/setup-bun@v2
-      - name: Evaluate dependency fixes safely (no repo writes)
+      - name: Verify patched committed dependency graph
         working-directory: private-workspace
         shell: bash
         run: |
@@ -365,25 +367,10 @@ jobs:
           fi
           if node scripts/v1-security-removal-sandbox.cjs > "$RUNNER_TEMP/tg-zod-summary.log" 2>&1; then
             grep '^V1-SEC-' "$RUNNER_TEMP/tg-zod-summary.log" || true
-            echo "Security updates changed only this ephemeral runner checkout."
+            echo "Committed dependency graph verified in isolated CI."
           else
             grep '^V1-SEC-' "$RUNNER_TEMP/tg-zod-summary.log" || true
             echo "::error::Security dependency trial incompatible or incomplete (private logs withheld)"
             exit 1
           fi
 
-      - name: Detect encrypted trial artifact, if generated
-        id: patch_artifact
-        shell: bash
-        run: |
-          if [[ -f "$RUNNER_TEMP/tablegate-v1-security-deps.enc" ]]; then
-            echo "present=true" >> "$GITHUB_OUTPUT"
-          fi
-      - name: Upload encrypted dependency patch (short-lived, no plaintext)
-        if: steps.patch_artifact.outputs.present == 'true'
-        uses: actions/upload-artifact@v4
-        with:
-          name: tablegate-v1-deps-encrypted
-          path: ${{ runner.temp }}/tablegate-v1-security-deps.enc
-          if-no-files-found: error
-          retention-days: 1
