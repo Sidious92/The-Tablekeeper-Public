@@ -350,15 +350,6 @@ jobs:
         with:
           node-version: "22"
       - uses: oven-sh/setup-bun@v2
-      - name: Temporary encrypted Bun lockfile repair handoff
-        working-directory: private-workspace
-        shell: bash
-        run: |
-          if [[ -f scripts/tablegate-lockfile-delta-temp.cjs ]]; then
-            node scripts/tablegate-lockfile-delta-temp.cjs
-            # Restore the pinned lock: downstream CI must validate committed files.
-            git checkout -- bun.lock
-          fi
       - name: Evaluate dependency fixes safely (no repo writes)
         working-directory: private-workspace
         shell: bash
