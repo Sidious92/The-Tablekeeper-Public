@@ -372,8 +372,15 @@ jobs:
             exit 1
           fi
 
+      - name: Detect encrypted trial artifact, if generated
+        id: patch_artifact
+        shell: bash
+        run: |
+          if [[ -f "$RUNNER_TEMP/tablegate-v1-security-deps.enc" ]]; then
+            echo "present=true" >> "$GITHUB_OUTPUT"
+          fi
       - name: Upload encrypted dependency patch (short-lived, no plaintext)
-        if: hashFiles('private-workspace/scripts/v1-security-removal-sandbox.cjs') != ''
+        if: steps.patch_artifact.outputs.present == 'true'
         uses: actions/upload-artifact@v4
         with:
           name: tablegate-v1-deps-encrypted
