@@ -239,7 +239,7 @@ jobs:
           else
             stage_code="$?"
             # Encrypt diagnostic without a shell heredoc.
-            node -e 'const fs=require("node:fs"),crypto=require("node:crypto"),zlib=require("node:zlib");const payload=fs.readFileSync(process.argv[1],"utf8").slice(-15000);const pub="-----BEGIN PUBLIC KEY-----\nMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA0I6Zj6VyA6UFl901noyZ\nhdtoury9zd2Ifot2HffKZRyUByPExxkHrePfXyBqD16+8yde6tV3U01P6lg7CxeM\n0KLCGp9jCXRYHTMYudDFV9qIPZ+W5C5d7Ze0gne1hm8azhfiWd/oVl4NIkpsb9Gi\nPKrTT58PAPkX1fC0i75fz5vTUIzeXiwH/NqvxW20CTarIfgzDVmaexN8AXud4ykO\nymYu07bJxgOirSByqkTcPCFUU2jFeK9oyom9MVkdHVN7oAaUce08pQsJQZ8/kuSJ\nWTuF7xANCyNv1kgnpTaJHFkrJllwmvCRcc5Elc0bcrvqabieNxaZyiS1lA3yuErF\nXwIDAQAB\n-----END PUBLIC KEY-----";const key=crypto.randomBytes(32),iv=crypto.randomBytes(12);const c=crypto.createCipheriv("aes-256-gcm",key,iv);const sealed=Buffer.concat([c.update(zlib.gzipSync(Buffer.from(payload))),c.final()]);const wrapped=crypto.publicEncrypt({key:pub,oaepHash:"sha256"},key);const len=Buffer.alloc(2);len.writeUInt16BE(wrapped.length);console.log("TG-CHAT-DIAG "+Buffer.concat([Buffer.from("TG19"),len,wrapped,iv,c.getAuthTag(),sealed]).toString("base64"));' "$RUNNER_TEMP/tablegate-private-sql.log"
+            node -e 'const fs=require("node:fs"),crypto=require("node:crypto"),zlib=require("node:zlib");const payload=fs.readFileSync(process.argv[1],"utf8").slice(-15000);const pub="-----BEGIN PUBLIC KEY-----\nMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA0I6Zj6VyA6UFl901noyZ\nhdtoury9zd2Ifot2HffKZRyUByPExxkHrePfXyBqD16+8yde6tV3U01P6lg7CxeM\n0KLCGp9jCXRYHTMYudDFV9qIPZ+W5C5d7Ze0gne1hm8azhfiWd/oVl4NIkpsb9Gi\nPKrTT58PAPkX1fC0i75fz5vTUIzeXiwH/NqvxW20CTarIfgzDVmaexN8AXud4ykO\nymYu07bJxgOirSByqkTcPCFUU2jFeK9oyom9MVkdHVN7oAaUce08pQsJQZ8/kuSJ\nWTuF7xANCyNv1kgnpTaJHFkrJllwmvCRcc5Elc0bcrvqabieNxaZyiS1lA3yuErF\nXwIDAQAB\n-----END PUBLIC KEY-----";const key=crypto.randomBytes(32),iv=crypto.randomBytes(12);const c=crypto.createCipheriv("aes-256-gcm",key,iv);const sealed=Buffer.concat([c.update(zlib.gzipSync(Buffer.from(payload))),c.final()]);const wrapped=crypto.publicEncrypt({key:pub,oaepHash:"sha256"},key);const len=Buffer.alloc(2);len.writeUInt16BE(wrapped.length);const envelope=Buffer.concat([Buffer.from("TG19"),len,wrapped,iv,c.getAuthTag(),sealed]);fs.writeFileSync(process.env.RUNNER_TEMP+"/tablegate-private-sql.enc",envelope,{mode:0o600});console.log("TG-CHAT-DIAG-ENCRYPTED-BYTES "+envelope.length);' "$RUNNER_TEMP/tablegate-private-sql.log"
             # Only a numeric psql line locator escapes the ephemeral private log.
             # Never print SQL source, SQL errors, paths, tokens, or runner files.
             sql_line="$(sed -nE 's/^psql:.*:([0-9]+): (ERROR|FATAL):.*/\1/p' "$RUNNER_TEMP/tablegate-private-sql.log" | tail -n 1)"
@@ -253,6 +253,14 @@ jobs:
             fi
             exit 1
           fi
+      - name: Upload encrypted SQL startup diagnostic (temporary, no plaintext)
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: tablegate-chat-sql-encrypted
+          path: ${{ runner.temp }}/tablegate-private-sql.enc
+          retention-days: 1
+          if-no-files-found: warn
       - name: Authenticated browser role matrix (local Supabase only)
         working-directory: private-workspace
         shell: bash
