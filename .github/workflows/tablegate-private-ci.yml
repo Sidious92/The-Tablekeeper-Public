@@ -389,6 +389,26 @@ jobs:
             elif grep -Eq 'Direct vulnerable Zod dependency remains|Unapproved Vitest version|Scoped esbuild override is absent|Unremediated lockfile entry|Vitest lockfile mismatch' "$RUNNER_TEMP/tg-zod-summary.log"; then
               failure_class="dependency-manifest-or-lock"
             fi
+            # A second read-only audit obtains anonymous package positions for
+            # maintainers. Only numbers escape; raw registry JSON stays on runner.
+            if [[ "$failure_class" == "dependency-audit-advisories" ]]; then
+              bun audit --json > "$RUNNER_TEMP/tg-audit-private.json" 2> "$RUNNER_TEMP/tg-audit-private.err" || true
+              AUDIT_JSON_FILE="$RUNNER_TEMP/tg-audit-private.json" node -e '
+                const fs=require("node:fs");
+                try {
+                  const report=JSON.parse(fs.readFileSync(process.env.AUDIT_JSON_FILE,"utf8"));
+                  const lock=fs.readFileSync("bun.lock","utf8");
+                  const all=[...lock.matchAll(/^    "([^"]+)": \\[/gm)].map(m=>m[1]).sort();
+                  const affected=Object.entries(report).filter(([,v])=>Array.isArray(v)&&v.length);
+                  const nums=affected.map(([k])=>all.indexOf(k)+1);
+                  const mapped=nums.filter(n=>n>0);
+                  const total=affected.reduce((n,[,v])=>n+v.length,0);
+                  console.log("Anonymous dependency audit: affected="+affected.length+" reports="+total+" package_indices="+mapped.join(",")+" unmatched="+(nums.length-mapped.length));
+                } catch {
+                  console.log("Anonymous dependency audit: unable to classify second registry response");
+                }
+              '
+            fi
             echo "::error::Security dependency gate failed: ${failure_class} (private details withheld)"
             exit 1
           fi
