@@ -398,7 +398,7 @@ jobs:
                 try {
                   const report=JSON.parse(fs.readFileSync(process.env.AUDIT_JSON_FILE,"utf8"));
                   const lock=fs.readFileSync("bun.lock","utf8");
-                  const all=[...lock.matchAll(/^    "([^"]+)": \\[/gm)].map(m=>m[1]).sort();
+                  const all=[...lock.matchAll(/^    "([^"]+)": \[/gm)].map(m=>m[1]).sort();
                   const affected=Object.entries(report).filter(([,v])=>Array.isArray(v)&&v.length);
                   const nums=affected.map(([k])=>all.indexOf(k)+1);
                   const mapped=nums.filter(n=>n>0);
