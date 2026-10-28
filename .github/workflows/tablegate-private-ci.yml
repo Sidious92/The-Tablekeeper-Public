@@ -372,7 +372,15 @@ jobs:
             # Publish ONLY an allowlisted diagnostic category. Never print
             # private audit output, package names, versions or source paths.
             failure_class="sandbox-unclassified"
-            if grep -Fq 'Committed dependency graph reports advisories' "$RUNNER_TEMP/tg-zod-summary.log"; then
+            if grep -Fq 'V1-SEC-AUDIT-FAILURE=advisories' "$RUNNER_TEMP/tg-zod-summary.log"; then
+              failure_class="dependency-audit-advisories"
+            elif grep -Fq 'V1-SEC-AUDIT-FAILURE=invalid-or-empty-audit-response' "$RUNNER_TEMP/tg-zod-summary.log"; then
+              failure_class="dependency-audit-invalid-response"
+            elif grep -Fq 'V1-SEC-AUDIT-FAILURE=nonzero-without-reported-advisories' "$RUNNER_TEMP/tg-zod-summary.log"; then
+              failure_class="dependency-audit-nonzero-no-advisories"
+            elif grep -Fq 'V1-SEC-AUDIT-FAILURE=command-error' "$RUNNER_TEMP/tg-zod-summary.log"; then
+              failure_class="dependency-audit-runtime-error"
+            elif grep -Fq 'Committed dependency graph reports advisories' "$RUNNER_TEMP/tg-zod-summary.log"; then
               failure_class="dependency-audit-advisories"
             elif grep -Fq 'Committed dependency audit failed' "$RUNNER_TEMP/tg-zod-summary.log"; then
               failure_class="dependency-audit-command"
