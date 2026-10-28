@@ -369,8 +369,19 @@ jobs:
             grep '^V1-SEC-' "$RUNNER_TEMP/tg-zod-summary.log" || true
             echo "Committed dependency graph verified in isolated CI."
           else
-            grep '^V1-SEC-' "$RUNNER_TEMP/tg-zod-summary.log" || true
-            echo "::error::Security dependency trial incompatible or incomplete (private logs withheld)"
+            # Publish ONLY an allowlisted diagnostic category. Never print
+            # private audit output, package names, versions or source paths.
+            failure_class="sandbox-unclassified"
+            if grep -Fq 'Committed dependency graph reports advisories' "$RUNNER_TEMP/tg-zod-summary.log"; then
+              failure_class="dependency-audit-advisories"
+            elif grep -Fq 'Committed dependency audit failed' "$RUNNER_TEMP/tg-zod-summary.log"; then
+              failure_class="dependency-audit-command"
+            elif grep -Fq 'Dependency audit returned invalid JSON' "$RUNNER_TEMP/tg-zod-summary.log"; then
+              failure_class="dependency-audit-format"
+            elif grep -Eq 'Direct vulnerable Zod dependency remains|Unapproved Vitest version|Scoped esbuild override is absent|Unremediated lockfile entry|Vitest lockfile mismatch' "$RUNNER_TEMP/tg-zod-summary.log"; then
+              failure_class="dependency-manifest-or-lock"
+            fi
+            echo "::error::Security dependency gate failed: ${failure_class} (private details withheld)"
             exit 1
           fi
 
