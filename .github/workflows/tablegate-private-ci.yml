@@ -92,10 +92,10 @@ jobs:
           levels=collections.Counter(rules)
           print("Anonymous ESLint rule categories:",sorted(levels.items())[:20], "total",sum(levels.values()))
           # Only numeric positions/severity: no private file paths or source text.
-          content=re.sub(r"\\x1b\\[[0-9;]*m","",content)
-          lint_positions=re.findall(r"^\\s*(\\d+):(\\d+)\\s+error\\s+",content,re.M)
-          parse_positions=re.findall(r"^\\s*(\\d+):(\\d+)\\s+error\\s+Parsing error:",content,re.M)
-          totals=re.findall(r"(\\d+) problems? \\((\\d+) errors?, (\\d+) warnings?\\)",content)
+          content=re.sub(r"\x1b\[[0-9;]*m","",content)
+          lint_positions=re.findall(r"^\s*(\d+):(\d+)\s+error\s+",content,re.M)
+          parse_positions=re.findall(r"^\s*(\d+):(\d+)\s+error\s+Parsing error:",content,re.M)
+          totals=re.findall(r"(\d+) problems? \((\d+) errors?, (\d+) warnings?\)",content)
           print("Anonymous ESLint totals:",totals[-1:] if totals else [])
           print("Anonymous ESLint error coordinates:",lint_positions[:12])
           print("Anonymous ESLint parse coordinates:",parse_positions[:12])
@@ -107,14 +107,14 @@ jobs:
               result=subprocess.run(["./node_modules/.bin/eslint",target,"--rule","prettier/prettier: off"],
                                     capture_output=True,text=True,timeout=40)
               if result.returncode:
-                  clean=re.sub(r"\\x1b\\[[0-9;]*m","",result.stdout+"\\n"+result.stderr)
-                  coords=re.findall(r"^\\s*(\\d+):(\\d+)\\s+(?:error|warning)\\s+",clean,re.M)
+                  clean=re.sub(r"\x1b\[[0-9;]*m","",result.stdout+"\n"+result.stderr)
+                  coords=re.findall(r"^\s*(\d+):(\d+)\s+(?:error|warning)\s+",clean,re.M)
                   print("Anonymous changed-file ESLint failure:",i,"coordinates:",coords[:8],
                         "parse:",("Parsing error" in clean),
                         "exception:",("TypeError:" in clean or "Error:" in clean))
                   if "Parsing error" in clean:
                       fatal=[line for line in clean.splitlines() if "Parsing error" in line]
-                      print("Anonymous parser numeric tokens:",[re.findall(r"\\d+",line)[:8] for line in fatal[:3]])
+                      print("Anonymous parser numeric tokens:",[re.findall(r"\d+",line)[:8] for line in fatal[:3]])
                       print("Anonymous parser line lengths:",[len(line) for line in fatal[:3]])
           PYLINT
               fi
