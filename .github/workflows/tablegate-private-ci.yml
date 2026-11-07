@@ -92,8 +92,11 @@ jobs:
           levels=collections.Counter(rules)
           print("Anonymous ESLint rule categories:",sorted(levels.items())[:20], "total",sum(levels.values()))
           # Only numeric positions/severity: no private file paths or source text.
+          content=re.sub(r"\\x1b\\[[0-9;]*m","",content)
           lint_positions=re.findall(r"^\\s*(\\d+):(\\d+)\\s+error\\s+",content,re.M)
           parse_positions=re.findall(r"^\\s*(\\d+):(\\d+)\\s+error\\s+Parsing error:",content,re.M)
+          totals=re.findall(r"(\\d+) problems? \\((\\d+) errors?, (\\d+) warnings?\\)",content)
+          print("Anonymous ESLint totals:",totals[-1:] if totals else [])
           print("Anonymous ESLint error coordinates:",lint_positions[:12])
           print("Anonymous ESLint parse coordinates:",parse_positions[:12])
           PYLINT
