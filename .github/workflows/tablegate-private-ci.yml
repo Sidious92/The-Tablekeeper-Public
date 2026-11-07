@@ -112,6 +112,10 @@ jobs:
                   print("Anonymous changed-file ESLint failure:",i,"coordinates:",coords[:8],
                         "parse:",("Parsing error" in clean),
                         "exception:",("TypeError:" in clean or "Error:" in clean))
+                  if "Parsing error" in clean:
+                      fatal=[line for line in clean.splitlines() if "Parsing error" in line]
+                      print("Anonymous parser numeric tokens:",[re.findall(r"\\d+",line)[:8] for line in fatal[:3]])
+                      print("Anonymous parser line lengths:",[len(line) for line in fatal[:3]])
           PYLINT
               fi
               if [[ "$stage" == "types" ]]; then
