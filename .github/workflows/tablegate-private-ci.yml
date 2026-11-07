@@ -99,6 +99,19 @@ jobs:
           print("Anonymous ESLint totals:",totals[-1:] if totals else [])
           print("Anonymous ESLint error coordinates:",lint_positions[:12])
           print("Anonymous ESLint parse coordinates:",parse_positions[:12])
+          # Inspect only the changed Atlas files; suppress their diagnostic text and path.
+          import subprocess
+          targets=["src/cloud/CloudAtlasExplorer.tsx","src/cloud/CloudPlayerAtlasExplorer.tsx",
+                   "src/test/cloud-atlas-explorer.test.tsx","src/test/cloud-player-atlas-explorer.test.tsx"]
+          for i,target in enumerate(targets,1):
+              result=subprocess.run(["./node_modules/.bin/eslint",target,"--rule","prettier/prettier: off"],
+                                    capture_output=True,text=True,timeout=40)
+              if result.returncode:
+                  clean=re.sub(r"\\x1b\\[[0-9;]*m","",result.stdout+"\\n"+result.stderr)
+                  coords=re.findall(r"^\\s*(\\d+):(\\d+)\\s+(?:error|warning)\\s+",clean,re.M)
+                  print("Anonymous changed-file ESLint failure:",i,"coordinates:",coords[:8],
+                        "parse:",("Parsing error" in clean),
+                        "exception:",("TypeError:" in clean or "Error:" in clean))
           PYLINT
               fi
               if [[ "$stage" == "types" ]]; then
