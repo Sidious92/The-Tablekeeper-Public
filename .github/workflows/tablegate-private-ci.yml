@@ -91,6 +91,11 @@ jobs:
           rules=re.findall(r"\s(?:error|warning)\s+[^\n]+?\s+([@\w-]+(?:/[\w-]+)?)\s*$",content,re.M)
           levels=collections.Counter(rules)
           print("Anonymous ESLint rule categories:",sorted(levels.items())[:20], "total",sum(levels.values()))
+          # Only numeric positions/severity: no private file paths or source text.
+          lint_positions=re.findall(r"^\\s*(\\d+):(\\d+)\\s+error\\s+",content,re.M)
+          parse_positions=re.findall(r"^\\s*(\\d+):(\\d+)\\s+error\\s+Parsing error:",content,re.M)
+          print("Anonymous ESLint error coordinates:",lint_positions[:12])
+          print("Anonymous ESLint parse coordinates:",parse_positions[:12])
           PYLINT
               fi
               if [[ "$stage" == "types" ]]; then
