@@ -161,7 +161,7 @@ jobs:
   browser:
     name: Browser smoke (local only)
     needs: validate
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 25
     steps:
       - name: Checkout private commit without persisting token
@@ -217,7 +217,7 @@ jobs:
   sql:
     name: Disposable local Supabase / SQL / RLS / Storage
     needs: validate
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 40
     env:
       ATLAS_ISOLATED_SQL_TEST: "yes"
