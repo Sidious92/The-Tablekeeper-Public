@@ -275,6 +275,8 @@ jobs:
                 qa_phase="$(sed -nE 's/^CI-QA-FAIL-PHASE=([0-9]{1,3})$/\1/p' "$RUNNER_TEMP/tablegate-role-browser-$stage.log" | tail -n 1)"
                 error_kind="$(sed -nE 's/^CI-QA-ERROR-KIND=(TIMEOUT|ASSERTION|HTTP|OTHER)$/\1/p' "$RUNNER_TEMP/tablegate-role-browser-$stage.log" | tail -n 1)"
                 [[ -z "$error_kind" ]] || echo "Anonymous role QA error category: $error_kind"
+                # Emit typed, allowlisted QA telemetry only; never echo private logs.
+                node -e 'try{const fs=require("node:fs");const x=fs.readFileSync(process.argv[1],"utf8").split(/\\r?\\n/).filter(s=>s.startsWith("CI-QA-LORE-CREATE-DIAG ")).pop();if(x){const d=JSON.parse(x.slice("CI-QA-LORE-CREATE-DIAG ".length));const v=a=>a===true?"Y":a===false?"N":"?";const p=Number.isInteger(d.phase)&&d.phase>=600&&d.phase<=619?d.phase:"?";const h=Number.isInteger(d.httpStatus)&&d.httpStatus>=100&&d.httpStatus<=599?d.httpStatus:"?";const k=["TIMEOUT","STRICT_LOCATOR","PAGE_CLOSED","OTHER"].includes(d.errorKind)?d.errorKind:"OTHER";console.log("Lore create anonymous diagnostics: phase="+p+" post="+v(d.postSeen)+" status="+h+" persisted="+v(d.persisted)+" validForm="+v(d.formValid)+" titleUnchanged="+v(d.titleStillCorrect)+" alert="+v(d.visibleAlert)+" kind="+k)}}catch{}' "$RUNNER_TEMP/tablegate-role-browser-$stage.log"
                 if [[ "$qa_phase" =~ ^[0-9]{1,3}$ ]]; then
                   echo "::error::$stage: failed at QA phase $qa_phase (private browser logs withheld)"
                 else
